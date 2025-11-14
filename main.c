@@ -1,5 +1,40 @@
 #include <gtk/gtk.h>
 #include <webkit/webkit.h>
+#include <glib.h>
+
+static gchar* hb_get_uri_from_config(void) {
+    const gchar *home = g_get_home_dir();
+    if (!home) return NULL;
+    gchar *path = g_build_filename(home, ".hudbox.json", NULL);
+    gchar *contents = NULL;
+    gsize length = 0;
+    GError *error = NULL;
+    if (!g_file_get_contents(path, &contents, &length, &error)) {
+        if (error) g_error_free(error);
+        g_free(path);
+        return NULL;
+    }
+    g_free(path);
+
+    // Try to extract an address from either array/object forms using a simple regex.
+    // Preferred new schema example:
+    // [ { "address": "http://..." } ]
+    GMatchInfo *match_info = NULL;
+    gchar *uri = NULL;
+
+    // 1) New schema: look for "address":"..."
+    GRegex *regex = g_regex_new("\"address\"\\s*:\\s*\"([^\"]*)\"", G_REGEX_MULTILINE | G_REGEX_RAW, 0, NULL);
+    if (regex && g_regex_match(regex, contents, 0, &match_info)) {
+        uri = g_match_info_fetch(match_info, 1);
+    }
+    if (match_info) { g_match_info_free(match_info); match_info = NULL; }
+    if (regex) { g_regex_unref(regex); regex = NULL; }
+
+    g_free(contents);
+
+    // Return duplicated string or NULL
+    return uri; // newly allocated by g_match_info_fetch or NULL
+}
 
 // Called when user starts dragging
 static void on_drag_begin(GtkGestureClick *gesture,
@@ -20,13 +55,13 @@ static void on_drag_begin(GtkGestureClick *gesture,
 static void activate(GtkApplication *app, gpointer user_data) {
     GtkWidget *window = gtk_application_window_new(app);
     gtk_window_set_title(GTK_WINDOW(window), "Borderless Draggable WebView");
-    gtk_window_set_default_size(GTK_WINDOW(window), 800, 600);
+    gtk_window_set_default_size(GTK_WINDOW(window), 800, 325);
     gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
     gtk_window_set_resizable(GTK_WINDOW(window), TRUE);
 
     // Make the entire window (including all children) 80% opaque.
     // This is the correct, compositor-friendly way in GTK4 for whole-window translucency.
-    gtk_widget_set_opacity(window, 0.8);
+    gtk_widget_set_opacity(window, 1.0);
 
     // WebView
     GtkWidget *web_view = webkit_web_view_new();
@@ -35,7 +70,10 @@ static void activate(GtkApplication *app, gpointer user_data) {
     GdkRGBA transparent = {0, 0, 0, 0};
     webkit_web_view_set_background_color(WEBKIT_WEB_VIEW(web_view), &transparent);
 
-    webkit_web_view_load_uri(WEBKIT_WEB_VIEW(web_view), "https://www.example.com");
+    const gchar *default_uri = "http://proxy.iinact.com/overlay/mopimopi/?HOST_PORT=ws://127.0.0.1:10501";
+    gchar *cfg_uri = hb_get_uri_from_config();
+    webkit_web_view_load_uri(WEBKIT_WEB_VIEW(web_view), cfg_uri ? cfg_uri : default_uri);
+    if (cfg_uri) g_free(cfg_uri);
 
     // Drag-to-move
     GtkGesture *drag = gtk_gesture_click_new();
