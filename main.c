@@ -108,6 +108,89 @@ static gboolean hb_get_int_from_config(const gchar *key, gint *out_value) {
     return ok;
 }
 
+// Get boolean value from config by key; accepts quoted or unquoted key
+static gboolean hb_get_bool_from_config(const gchar *key, gboolean *out_value) {
+    if (!key || !out_value) return FALSE;
+    const gchar *home = g_get_home_dir();
+    if (!home) return FALSE;
+    gchar *path = g_build_filename(home, ".hudbox.json", NULL);
+    gchar *contents = NULL;
+    gsize length = 0;
+    GError *error = NULL;
+    if (!g_file_get_contents(path, &contents, &length, &error)) {
+        if (error) g_error_free(error);
+        g_free(path);
+        return FALSE;
+    }
+    g_free(path);
+
+    gchar *pattern = g_strdup_printf("(?:\\\"%s\\\"|%s)\\s*:\\s*(true|false)", key, key);
+    GMatchInfo *match_info = NULL;
+    GRegex *regex = g_regex_new(pattern, G_REGEX_MULTILINE | G_REGEX_RAW | G_REGEX_CASELESS, 0, NULL);
+    g_free(pattern);
+
+    gboolean ok = FALSE;
+    if (regex && g_regex_match(regex, contents, 0, &match_info)) {
+        gchar *valstr = g_match_info_fetch(match_info, 1);
+        if (valstr) {
+            if (g_ascii_strcasecmp(valstr, "true") == 0) {
+                *out_value = TRUE;
+            } else {
+                *out_value = FALSE;
+            }
+            ok = TRUE;
+            g_free(valstr);
+        }
+    }
+    if (match_info) { g_match_info_free(match_info); match_info = NULL; }
+    if (regex) { g_regex_unref(regex); regex = NULL; }
+
+    g_free(contents);
+    return ok;
+}
+
+// Get double value from config by key; accepts quoted or unquoted key
+static gboolean hb_get_double_from_config(const gchar *key, gdouble *out_value) {
+    if (!key || !out_value) return FALSE;
+    const gchar *home = g_get_home_dir();
+    if (!home) return FALSE;
+    gchar *path = g_build_filename(home, ".hudbox.json", NULL);
+    gchar *contents = NULL;
+    gsize length = 0;
+    GError *error = NULL;
+    if (!g_file_get_contents(path, &contents, &length, &error)) {
+        if (error) g_error_free(error);
+        g_free(path);
+        return FALSE;
+    }
+    g_free(path);
+
+    // Match integer or decimal number: 1 or 1.0
+    gchar *pattern = g_strdup_printf("(?:\\\"%s\\\"|%s)\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)", key, key);
+    GMatchInfo *match_info = NULL;
+    GRegex *regex = g_regex_new(pattern, G_REGEX_MULTILINE | G_REGEX_RAW, 0, NULL);
+    g_free(pattern);
+
+    gboolean ok = FALSE;
+    if (regex && g_regex_match(regex, contents, 0, &match_info)) {
+        gchar *numstr = g_match_info_fetch(match_info, 1);
+        if (numstr) {
+            gchar *endp = NULL;
+            gdouble val = g_ascii_strtod(numstr, &endp);
+            if (endp && *endp == '\0') {
+                *out_value = val;
+                ok = TRUE;
+            }
+            g_free(numstr);
+        }
+    }
+    if (match_info) { g_match_info_free(match_info); match_info = NULL; }
+    if (regex) { g_regex_unref(regex); regex = NULL; }
+
+    g_free(contents);
+    return ok;
+}
+
 // Called when user starts dragging
 static void on_drag_begin(GtkGestureClick *gesture,
                           gint n_press,
@@ -131,12 +214,19 @@ static void activate(GtkApplication *app, gpointer user_data) {
     const gchar *default_title = "Borderless Draggable WebView";
     int width = 800;
     int height = 325;
-    bool locked = false;
+    gboolean locked = FALSE;
+    gdouble opacity = 1.0;
 
     // Load overrides from ~/.hudbox.json
     gchar *cfg_title = hb_get_title_from_config();
     hb_get_int_from_config("width", &width);
     hb_get_int_from_config("height", &height);
+    hb_get_bool_from_config("locked", &locked);
+    hb_get_double_from_config("opacity", &opacity);
+
+    // Clamp opacity to [0.0, 1.0]
+    if (opacity < 0.0) opacity = 0.0;
+    if (opacity > 1.0) opacity = 1.0;
 
     gtk_window_set_title(GTK_WINDOW(window), cfg_title ? cfg_title : default_title);
     gtk_window_set_default_size(GTK_WINDOW(window), width, height);
@@ -145,9 +235,8 @@ static void activate(GtkApplication *app, gpointer user_data) {
     gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
     gtk_window_set_resizable(GTK_WINDOW(window), TRUE);
 
-    // Make the entire window (including all children) 80% opaque.
-    // This is the correct, compositor-friendly way in GTK4 for whole-window translucency.
-    gtk_widget_set_opacity(window, 1.0);
+    // Apply window opacity from config (compositor-friendly whole-window translucency)
+    gtk_widget_set_opacity(window, opacity);
 
     // WebView
     GtkWidget *web_view = webkit_web_view_new();
