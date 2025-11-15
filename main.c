@@ -1,195 +1,129 @@
 #include <gtk/gtk.h>
 #include <webkit/webkit.h>
 #include <glib.h>
+#include <json-glib/json-glib.h>
 #include <stdlib.h>
 
-static gchar* hb_get_uri_from_config(void) {
-    const gchar *home = g_get_home_dir();
-    if (!home) return NULL;
-    gchar *path = g_build_filename(home, ".hudbox.json", NULL);
+// ---------------- Config parsing (JSON) ----------------
+
+typedef struct {
+    gchar *title;
+    gchar *address;
+    gint width;
+    gint height;
+    gboolean locked;
+    gdouble opacity;
+} HbWindowCfg;
+
+static void hb_window_cfg_init_defaults(HbWindowCfg *cfg) {
+    cfg->title = g_strdup("Borderless Draggable WebView");
+    cfg->address = g_strdup("https://www.google.com");
+    cfg->width = 800;
+    cfg->height = 325;
+    cfg->locked = FALSE;
+    cfg->opacity = 1.0;
+}
+
+static void hb_window_cfg_clear(HbWindowCfg *cfg) {
+    if (!cfg) return;
+    g_clear_pointer(&cfg->title, g_free);
+    g_clear_pointer(&cfg->address, g_free);
+}
+
+static void hb_apply_object_to_cfg(JsonObject *obj, HbWindowCfg *cfg) {
+    if (!obj || !cfg) return;
+
+    // title
+    if (json_object_has_member(obj, "title")) {
+        const gchar *s = json_object_get_string_member(obj, "title");
+        if (s) { g_free(cfg->title); cfg->title = g_strdup(s); }
+    }
+    // address (aka uri)
+    if (json_object_has_member(obj, "address")) {
+        const gchar *s = json_object_get_string_member(obj, "address");
+        if (s) { g_free(cfg->address); cfg->address = g_strdup(s); }
+    } else if (json_object_has_member(obj, "uri")) {
+        const gchar *s = json_object_get_string_member(obj, "uri");
+        if (s) { g_free(cfg->address); cfg->address = g_strdup(s); }
+    }
+    // width/height
+    if (json_object_has_member(obj, "width")) {
+        cfg->width = (gint) json_object_get_int_member(obj, "width");
+    }
+    if (json_object_has_member(obj, "height")) {
+        cfg->height = (gint) json_object_get_int_member(obj, "height");
+    }
+    // locked
+    if (json_object_has_member(obj, "locked")) {
+        cfg->locked = json_object_get_boolean_member(obj, "locked");
+    }
+    // opacity
+    if (json_object_has_member(obj, "opacity")) {
+        cfg->opacity = json_object_get_double_member(obj, "opacity");
+    }
+}
+
+static GPtrArray* hb_load_configs_from_json(const gchar *path) {
     gchar *contents = NULL;
-    gsize length = 0;
+    gsize len = 0;
     GError *error = NULL;
-    if (!g_file_get_contents(path, &contents, &length, &error)) {
+    if (!g_file_get_contents(path, &contents, &len, &error)) {
         if (error) g_error_free(error);
-        g_free(path);
         return NULL;
     }
-    g_free(path);
 
-    // Try to extract an address from either array/object forms using a simple regex.
-    // Preferred new schema example:
-    // [ { "address": "http://..." } ]
-    GMatchInfo *match_info = NULL;
-    gchar *uri = NULL;
-
-    // 1) New schema: look for "address":"..."
-    GRegex *regex = g_regex_new("\"address\"\\s*:\\s*\"([^\"]*)\"", G_REGEX_MULTILINE | G_REGEX_RAW, 0, NULL);
-    if (regex && g_regex_match(regex, contents, 0, &match_info)) {
-        uri = g_match_info_fetch(match_info, 1);
-    }
-    if (match_info) { g_match_info_free(match_info); match_info = NULL; }
-    if (regex) { g_regex_unref(regex); regex = NULL; }
-
-    g_free(contents);
-
-    // Return duplicated string or NULL
-    return uri; // newly allocated by g_match_info_fetch or NULL
-}
-
-// Get optional window title from config. Accepts quoted or unquoted key: title: "..."
-static gchar* hb_get_title_from_config(void) {
-    const gchar *home = g_get_home_dir();
-    if (!home) return NULL;
-    gchar *path = g_build_filename(home, ".hudbox.json", NULL);
-    gchar *contents = NULL;
-    gsize length = 0;
-    GError *error = NULL;
-    if (!g_file_get_contents(path, &contents, &length, &error)) {
+    JsonParser *parser = json_parser_new();
+    if (!json_parser_load_from_data(parser, contents, len, &error)) {
         if (error) g_error_free(error);
-        g_free(path);
+        g_object_unref(parser);
+        g_free(contents);
         return NULL;
     }
-    g_free(path);
 
-    // Match title key (quoted or unquoted) followed by a quoted string value
-    GMatchInfo *match_info = NULL;
-    gchar *title = NULL;
-    GRegex *regex = g_regex_new("(?:\\\"title\\\"|title)\\s*:\\s*\\\"([^\\\"]*)\\\"", G_REGEX_MULTILINE | G_REGEX_RAW, 0, NULL);
-    if (regex && g_regex_match(regex, contents, 0, &match_info)) {
-        title = g_match_info_fetch(match_info, 1);
+    JsonNode *root = json_parser_get_root(parser);
+    if (!root) {
+        g_object_unref(parser);
+        g_free(contents);
+        return NULL;
     }
-    if (match_info) { g_match_info_free(match_info); match_info = NULL; }
-    if (regex) { g_regex_unref(regex); regex = NULL; }
 
-    g_free(contents);
-    return title; // newly allocated or NULL
-}
+    GPtrArray *arr = g_ptr_array_new_with_free_func(g_free);
 
-// Get integer value (e.g., width/height) from config by key; accepts quoted or unquoted key
-static gboolean hb_get_int_from_config(const gchar *key, gint *out_value) {
-    if (!key || !out_value) return FALSE;
-    const gchar *home = g_get_home_dir();
-    if (!home) return FALSE;
-    gchar *path = g_build_filename(home, ".hudbox.json", NULL);
-    gchar *contents = NULL;
-    gsize length = 0;
-    GError *error = NULL;
-    if (!g_file_get_contents(path, &contents, &length, &error)) {
-        if (error) g_error_free(error);
-        g_free(path);
-        return FALSE;
-    }
-    g_free(path);
-
-    // Build regex for key: ("key"|key)\s*:\s*(number)
-    gchar *pattern = g_strdup_printf("(?:\\\"%s\\\"|%s)\\s*:\\s*([0-9]+)", key, key);
-    GMatchInfo *match_info = NULL;
-    GRegex *regex = g_regex_new(pattern, G_REGEX_MULTILINE | G_REGEX_RAW, 0, NULL);
-    g_free(pattern);
-
-    gboolean ok = FALSE;
-    if (regex && g_regex_match(regex, contents, 0, &match_info)) {
-        gchar *numstr = g_match_info_fetch(match_info, 1);
-        if (numstr) {
-            gchar *endp = NULL;
-            long val = strtol(numstr, &endp, 10);
-            if (endp && *endp == '\0') {
-                *out_value = (gint)val;
-                ok = TRUE;
-            }
-            g_free(numstr);
+    if (JSON_NODE_HOLDS_ARRAY(root)) {
+        JsonArray *ja = json_node_get_array(root);
+        guint n = json_array_get_length(ja);
+        for (guint i = 0; i < n; i++) {
+            JsonObject *obj = json_array_get_object_element(ja, i);
+            if (!obj) continue;
+            HbWindowCfg *cfg = g_new0(HbWindowCfg, 1);
+            hb_window_cfg_init_defaults(cfg);
+            hb_apply_object_to_cfg(obj, cfg);
+            // clamp opacity
+            if (cfg->opacity < 0.0) cfg->opacity = 0.0;
+            if (cfg->opacity > 1.0) cfg->opacity = 1.0;
+            g_ptr_array_add(arr, cfg);
         }
+    } else if (JSON_NODE_HOLDS_OBJECT(root)) {
+        JsonObject *obj = json_node_get_object(root);
+        HbWindowCfg *cfg = g_new0(HbWindowCfg, 1);
+        hb_window_cfg_init_defaults(cfg);
+        hb_apply_object_to_cfg(obj, cfg);
+        if (cfg->opacity < 0.0) cfg->opacity = 0.0;
+        if (cfg->opacity > 1.0) cfg->opacity = 1.0;
+        g_ptr_array_add(arr, cfg);
     }
-    if (match_info) { g_match_info_free(match_info); match_info = NULL; }
-    if (regex) { g_regex_unref(regex); regex = NULL; }
 
+    g_object_unref(parser);
     g_free(contents);
-    return ok;
+
+    if (arr->len == 0) {
+        g_ptr_array_free(arr, TRUE);
+        return NULL;
+    }
+    return arr;
 }
 
-// Get boolean value from config by key; accepts quoted or unquoted key
-static gboolean hb_get_bool_from_config(const gchar *key, gboolean *out_value) {
-    if (!key || !out_value) return FALSE;
-    const gchar *home = g_get_home_dir();
-    if (!home) return FALSE;
-    gchar *path = g_build_filename(home, ".hudbox.json", NULL);
-    gchar *contents = NULL;
-    gsize length = 0;
-    GError *error = NULL;
-    if (!g_file_get_contents(path, &contents, &length, &error)) {
-        if (error) g_error_free(error);
-        g_free(path);
-        return FALSE;
-    }
-    g_free(path);
-
-    gchar *pattern = g_strdup_printf("(?:\\\"%s\\\"|%s)\\s*:\\s*(true|false)", key, key);
-    GMatchInfo *match_info = NULL;
-    GRegex *regex = g_regex_new(pattern, G_REGEX_MULTILINE | G_REGEX_RAW | G_REGEX_CASELESS, 0, NULL);
-    g_free(pattern);
-
-    gboolean ok = FALSE;
-    if (regex && g_regex_match(regex, contents, 0, &match_info)) {
-        gchar *valstr = g_match_info_fetch(match_info, 1);
-        if (valstr) {
-            if (g_ascii_strcasecmp(valstr, "true") == 0) {
-                *out_value = TRUE;
-            } else {
-                *out_value = FALSE;
-            }
-            ok = TRUE;
-            g_free(valstr);
-        }
-    }
-    if (match_info) { g_match_info_free(match_info); match_info = NULL; }
-    if (regex) { g_regex_unref(regex); regex = NULL; }
-
-    g_free(contents);
-    return ok;
-}
-
-// Get double value from config by key; accepts quoted or unquoted key
-static gboolean hb_get_double_from_config(const gchar *key, gdouble *out_value) {
-    if (!key || !out_value) return FALSE;
-    const gchar *home = g_get_home_dir();
-    if (!home) return FALSE;
-    gchar *path = g_build_filename(home, ".hudbox.json", NULL);
-    gchar *contents = NULL;
-    gsize length = 0;
-    GError *error = NULL;
-    if (!g_file_get_contents(path, &contents, &length, &error)) {
-        if (error) g_error_free(error);
-        g_free(path);
-        return FALSE;
-    }
-    g_free(path);
-
-    // Match integer or decimal number: 1 or 1.0
-    gchar *pattern = g_strdup_printf("(?:\\\"%s\\\"|%s)\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)", key, key);
-    GMatchInfo *match_info = NULL;
-    GRegex *regex = g_regex_new(pattern, G_REGEX_MULTILINE | G_REGEX_RAW, 0, NULL);
-    g_free(pattern);
-
-    gboolean ok = FALSE;
-    if (regex && g_regex_match(regex, contents, 0, &match_info)) {
-        gchar *numstr = g_match_info_fetch(match_info, 1);
-        if (numstr) {
-            gchar *endp = NULL;
-            gdouble val = g_ascii_strtod(numstr, &endp);
-            if (endp && *endp == '\0') {
-                *out_value = val;
-                ok = TRUE;
-            }
-            g_free(numstr);
-        }
-    }
-    if (match_info) { g_match_info_free(match_info); match_info = NULL; }
-    if (regex) { g_regex_unref(regex); regex = NULL; }
-
-    g_free(contents);
-    return ok;
-}
+// ---------------- Drag handling ----------------
 
 // Called when user starts dragging
 static void on_drag_begin(GtkGestureClick *gesture,
@@ -207,52 +141,31 @@ static void on_drag_begin(GtkGestureClick *gesture,
     }
 }
 
-static void activate(GtkApplication *app, gpointer user_data) {
+static void hb_create_window(GtkApplication *app, const HbWindowCfg *cfg) {
     GtkWidget *window = gtk_application_window_new(app);
 
-    // Defaults
-    const gchar *default_title = "Borderless Draggable WebView";
-    int width = 800;
-    int height = 325;
-    gboolean locked = FALSE;
-    gdouble opacity = 1.0;
-
-    // Load overrides from ~/.hudbox.json
-    gchar *cfg_title = hb_get_title_from_config();
-    hb_get_int_from_config("width", &width);
-    hb_get_int_from_config("height", &height);
-    hb_get_bool_from_config("locked", &locked);
-    hb_get_double_from_config("opacity", &opacity);
-
-    // Clamp opacity to [0.0, 1.0]
-    if (opacity < 0.0) opacity = 0.0;
-    if (opacity > 1.0) opacity = 1.0;
-
-    gtk_window_set_title(GTK_WINDOW(window), cfg_title ? cfg_title : default_title);
-    gtk_window_set_default_size(GTK_WINDOW(window), width, height);
-    if (cfg_title) g_free(cfg_title);
+    gtk_window_set_title(GTK_WINDOW(window), cfg->title);
+    gtk_window_set_default_size(GTK_WINDOW(window), cfg->width, cfg->height);
 
     gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
     gtk_window_set_resizable(GTK_WINDOW(window), TRUE);
 
-    // Apply window opacity from config (compositor-friendly whole-window translucency)
+    // Clamp and apply opacity
+    gdouble opacity = cfg->opacity;
+    if (opacity < 0.0) opacity = 0.0;
+    if (opacity > 1.0) opacity = 1.0;
     gtk_widget_set_opacity(window, opacity);
 
     // WebView
     GtkWidget *web_view = webkit_web_view_new();
 
-    // Make WebView background transparent so window background shows through
+    // Transparent background to let window show through
     GdkRGBA transparent = (GdkRGBA){0, 0, 0, 0};
     webkit_web_view_set_background_color(WEBKIT_WEB_VIEW(web_view), &transparent);
 
-    const gchar *default_uri = "https://www.google.com";
-    gchar *cfg_uri = hb_get_uri_from_config();
-    webkit_web_view_load_uri(WEBKIT_WEB_VIEW(web_view), cfg_uri ? cfg_uri : default_uri);
-    if (cfg_uri) g_free(cfg_uri);
+    webkit_web_view_load_uri(WEBKIT_WEB_VIEW(web_view), cfg->address);
 
-    // Drag-to-move
-    if (!locked)
-    {
+    if (!cfg->locked) {
         GtkGesture *drag = gtk_gesture_click_new();
         gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(drag), GTK_PHASE_BUBBLE);
         gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(drag), GDK_BUTTON_PRIMARY);
@@ -262,6 +175,36 @@ static void activate(GtkApplication *app, gpointer user_data) {
 
     gtk_window_set_child(GTK_WINDOW(window), web_view);
     gtk_window_present(GTK_WINDOW(window));
+}
+
+static void activate(GtkApplication *app, gpointer user_data) {
+    // Try to load ~/.hudbox.json
+    const gchar *home = g_get_home_dir();
+    gchar *path = home ? g_build_filename(home, ".hudbox.json", NULL) : NULL;
+
+    GPtrArray *cfgs = NULL;
+    if (path) {
+        cfgs = hb_load_configs_from_json(path);
+        g_free(path);
+    }
+
+    if (cfgs && cfgs->len > 0) {
+        for (guint i = 0; i < cfgs->len; i++) {
+            HbWindowCfg *cfg = (HbWindowCfg*) g_ptr_array_index(cfgs, i);
+            hb_create_window(app, cfg);
+            hb_window_cfg_clear(cfg);
+            // free container struct itself; strings already cleared
+            // freed by array free func, but we already clear strings to avoid leaks
+        }
+        g_ptr_array_free(cfgs, TRUE);
+        return;
+    }
+
+    // Fallback: single default window if no config present/parsed
+    HbWindowCfg def;
+    hb_window_cfg_init_defaults(&def);
+    hb_create_window(app, &def);
+    hb_window_cfg_clear(&def);
 }
 
 int main(int argc, char **argv) {
