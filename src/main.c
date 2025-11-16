@@ -68,9 +68,26 @@ static int on_command_line(GApplication* gapp, GApplicationCommandLine* cmdline,
     int argc = 0;
     char** argv = g_application_command_line_get_arguments(cmdline, &argc);
 
-    // Handle --version: print version and exit without activating GUI
+    // Handle --help/-h and --version: print info and exit without activating GUI
     for (int i = 1; i < argc; i++)
     {
+        if (argv[i] && (g_strcmp0(argv[i], "--help") == 0 || g_strcmp0(argv[i], "-h") == 0))
+        {
+            const char* prog = (argc > 0 && argv[0]) ? argv[0] : "hudbox";
+            g_print("HudBox %s\n", HUDBOX_VERSION);
+            g_print("Usage: %s [--help] [--version] [config.json]\n\n", prog);
+            g_print("Options:\n");
+            g_print("  --help, -h     Show this help message and exit.\n");
+            g_print("  --version      Print the HudBox version and exit.\n\n");
+            g_print("Arguments:\n");
+            g_print("  config.json    Path to a JSON config file. If omitted, HudBox uses ~/.hudbox.json\n");
+            g_print("                 (creating a default file if it does not exist).\n\n");
+            g_print("Examples:\n");
+            g_print("  %s                # Use ~/.hudbox.json (create if missing)\n", prog);
+            g_print("  %s myhud.json     # Load windows from myhud.json\n", prog);
+            g_strfreev(argv);
+            return 0;
+        }
         if (argv[i] && g_strcmp0(argv[i], "--version") == 0)
         {
             g_print("%s\n", HUDBOX_VERSION);
