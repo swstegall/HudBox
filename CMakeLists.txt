@@ -141,3 +141,30 @@ add_test(NAME hb_window_tests COMMAND hb_window_tests)
 # Install rules
 include(GNUInstallDirs)
 install(TARGETS hudbox RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+# -------------------- CPack (DEB packaging) --------------------
+# Prepare a clean, numeric version for packaging (strip a leading 'v' if present)
+string(REGEX REPLACE "^v" "" HUDBOX_VERSION_NUMERIC "${HUDBOX_VERSION}")
+
+set(CPACK_PACKAGE_NAME "hudbox")
+set(CPACK_PACKAGE_VENDOR "HudBox Project")
+set(CPACK_PACKAGE_CONTACT "swstegall <swstegall@gmail.com>")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "HudBox — lightweight HUD overlay using GTK4/WebKitGTK")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/swstegall/HudBox")
+set(CPACK_PACKAGE_VERSION "${HUDBOX_VERSION_NUMERIC}")
+
+# Generator and Debian specifics
+set(CPACK_GENERATOR "DEB")
+set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+# Let CPack query shared library dependencies via dpkg-shlibdeps
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+# Basic Debian metadata
+set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
+set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+
+# License (if you have a LICENSE file, it will be included)
+if(EXISTS "${CMAKE_SOURCE_DIR}/LICENSE")
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
+endif()
+
+include(CPack)
