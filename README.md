@@ -163,6 +163,7 @@ Notes:
 - Content transparency: Even with a transparent window, page content can still have opaque elements. HudBox injects a user style sheet that forces `html, body` to transparent, but site‑specific elements may need their own CSS (which you could provide via the site or a custom page).
 - Dragging doesn’t work? Set `locked` to `false`. Drag anywhere on the page with the primary mouse button.
 - Opacity out of range? Values are clamped to `[0.0, 1.0]` at runtime.
+- Keep window always-on-top (GNOME Shell): You can use the "Window on Top" extension to force HudBox windows to stay above others. See https://extensions.gnome.org/extension/6619/window-on-top/.
 
 
 ## Development
