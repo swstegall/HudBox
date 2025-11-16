@@ -16,7 +16,7 @@ Core capabilities:
 
 Build-time dependencies:
 - A C23‑capable compiler (GCC/Clang)
-- CMake ≥ 4.0
+- CMake ≥ 3.31.6
 - pkg-config
 - GTK 4 development files (pkg-config name: `gtk4`)
 - WebKitGTK 6.0 development files (pkg-config name: `webkitgtk-6.0`)
@@ -30,14 +30,14 @@ Example packages by distro (names may vary; check your distribution):
 
 ## Build
 
-This is a standard CMake project. The executable is named `HudBox`.
+This is a standard CMake project. The executable is named `hudbox`.
 
 ```
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 ```
 
-The resulting binary will be at `build/HudBox` (or your generator’s default output folder).
+The resulting binary will be at `build/hudbox` (or your generator’s default output folder).
 
 
 ## Install
@@ -63,12 +63,7 @@ sudo cmake --install build
 ```
 
 Notes:
-- The installed executable is named `HudBox` and is placed in `$prefix/bin` (e.g., `$HOME/.local/bin/HudBox` or `/usr/local/bin/HudBox`).
-- If you prefer the lowercase command `hudbox` as used in the examples below, create a convenience symlink:
-
-```
-ln -sf "$(command -v HudBox)" "$HOME/.local/bin/hudbox"
-```
+- The installed executable is named `hudbox` and is placed in `$prefix/bin` (e.g., `$HOME/.local/bin/hudbox` or `/usr/local/bin/hudbox`).
 
 ## Usage
 
