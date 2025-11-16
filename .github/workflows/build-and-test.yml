@@ -1,10 +1,8 @@
-name: CMake on multiple platforms
+name: Build and Test
 
 on:
   push:
     branches: [ "master" ]
-    tags:
-      - 'v*'
   pull_request:
     branches: [ "master" ]
 
@@ -103,61 +101,3 @@ jobs:
         run: |
           git tag ${{ steps.next.outputs.new_tag }}
           git push origin ${{ steps.next.outputs.new_tag }}
-
-  package:
-    needs: tag
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install Dependencies (Ubuntu)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            cmake \
-            ninja-build \
-            pkg-config \
-            gcc g++ \
-            clang \
-            libgtk-4-dev \
-            libwebkitgtk-6.0-dev \
-            libjson-glib-dev \
-            dpkg-dev fakeroot
-
-      - name: Set reusable strings
-        id: strings
-        shell: bash
-        run: |
-          echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-
-      - name: Configure CMake (Release)
-        run: >
-          cmake -B ${{ steps.strings.outputs.build-output-dir }}
-          -DCMAKE_C_COMPILER=gcc
-          -DCMAKE_CXX_COMPILER=g++
-          -DCMAKE_BUILD_TYPE=Release
-          -S ${{ github.workspace }}
-
-      - name: Build
-        run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config Release --parallel
-
-      - name: Make DEB with CPack
-        working-directory: ${{ steps.strings.outputs.build-output-dir }}
-        run: cpack -G DEB
-
-      - name: Upload DEB artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: hudbox-deb
-          path: ${{ steps.strings.outputs.build-output-dir }}/*.deb
-
-      - name: Create GitHub Release and upload .deb
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ steps.strings.outputs.build-output-dir }}/*.deb
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
