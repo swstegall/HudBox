@@ -104,4 +104,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag ${{ steps.next.outputs.new_tag }}
-          git push https://$TOKEN@github.com/${{ github.repository }} ${{ steps.next.outputs.new_tag }}
+          git push https://$TOKEN:x-oauth-basic@github.com/${{ github.repository }}.git ${{ steps.next.outputs.new_tag }}
+          
