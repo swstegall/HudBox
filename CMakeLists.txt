@@ -31,3 +31,7 @@ target_compile_options(HudBox PRIVATE
         ${WEBKIT_CFLAGS_OTHER}
         ${JSONGLIB_CFLAGS_OTHER}
 )
+
+# Install rules
+include(GNUInstallDirs)
+install(TARGETS HudBox RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
