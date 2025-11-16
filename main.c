@@ -7,9 +7,11 @@
 // Apply a global CSS to make GTK toplevel windows fully transparent
 static void hb_install_transparent_css(void)
 {
+    // Only windows that opt-in via CSS class "hb-transparent" become transparent
     const char* css =
-        "window { background-color: transparent; }\n"
-        "GtkWindow { background-color: transparent; }\n";
+        ".hb-transparent { background-color: transparent; }\n"
+        "window.hb-transparent { background-color: transparent; }\n"
+        "GtkWindow.hb-transparent { background-color: transparent; }\n";
     GtkCssProvider* provider = gtk_css_provider_new();
     gtk_css_provider_load_from_string(provider, css);
     GdkDisplay* display = gdk_display_get_default();
@@ -33,6 +35,7 @@ typedef struct
     gint height;
     gboolean locked;
     gdouble opacity;
+    gboolean transparent; // if true, make window and web content backgrounds transparent
 } HbWindowCfg;
 
 static void hb_window_cfg_init_defaults(HbWindowCfg* cfg)
@@ -43,6 +46,7 @@ static void hb_window_cfg_init_defaults(HbWindowCfg* cfg)
     cfg->height = 325;
     cfg->locked = FALSE;
     cfg->opacity = 1.0;
+    cfg->transparent = FALSE;
 }
 
 static void hb_window_cfg_clear(HbWindowCfg* cfg)
@@ -103,6 +107,11 @@ static void hb_apply_object_to_cfg(JsonObject* obj, HbWindowCfg* cfg)
     if (json_object_has_member(obj, "opacity"))
     {
         cfg->opacity = json_object_get_double_member(obj, "opacity");
+    }
+    // transparent
+    if (json_object_has_member(obj, "transparent"))
+    {
+        cfg->transparent = json_object_get_boolean_member(obj, "transparent");
     }
 }
 
@@ -211,26 +220,33 @@ static void hb_create_window(GtkApplication* app, const HbWindowCfg* cfg)
     if (opacity > 1.0) opacity = 1.0;
     gtk_widget_set_opacity(window, opacity);
 
-    // WebView with forced transparent page background
+    // WebView (conditionally make page/window transparent based on config)
     GtkWidget* web_view = webkit_web_view_new();
 
-    const char* css_page_transparent =
-        "html, body {\n"
-        "  background: transparent !important;\n"
-        "  background-color: transparent !important;\n"
-        "}\n";
-    WebKitUserStyleSheet* sheet = webkit_user_style_sheet_new(
-        css_page_transparent,
-        WEBKIT_USER_CONTENT_INJECT_ALL_FRAMES,
-        WEBKIT_USER_STYLE_LEVEL_USER,
-        NULL, NULL);
-    WebKitUserContentManager* ucm = webkit_web_view_get_user_content_manager(WEBKIT_WEB_VIEW(web_view));
-    webkit_user_content_manager_add_style_sheet(ucm, sheet);
-    g_object_unref(sheet);
+    if (cfg->transparent)
+    {
+        // Mark the GTK window as transparent via CSS class
+        gtk_widget_add_css_class(window, "hb-transparent");
 
-    // Transparent background to let window show through
-    GdkRGBA transparent = (GdkRGBA){0, 0, 0, 0};
-    webkit_web_view_set_background_color(WEBKIT_WEB_VIEW(web_view), &transparent);
+        // Force page background to be transparent
+        const char* css_page_transparent =
+            "html, body {\n"
+            "  background: transparent !important;\n"
+            "  background-color: transparent !important;\n"
+            "}\n";
+        WebKitUserStyleSheet* sheet = webkit_user_style_sheet_new(
+            css_page_transparent,
+            WEBKIT_USER_CONTENT_INJECT_ALL_FRAMES,
+            WEBKIT_USER_STYLE_LEVEL_USER,
+            NULL, NULL);
+        WebKitUserContentManager* ucm = webkit_web_view_get_user_content_manager(WEBKIT_WEB_VIEW(web_view));
+        webkit_user_content_manager_add_style_sheet(ucm, sheet);
+        g_object_unref(sheet);
+
+        // Transparent WebView surface to let window show through
+        GdkRGBA transparent = (GdkRGBA){0, 0, 0, 0};
+        webkit_web_view_set_background_color(WEBKIT_WEB_VIEW(web_view), &transparent);
+    }
 
     webkit_web_view_load_uri(WEBKIT_WEB_VIEW(web_view), cfg->address);
 
