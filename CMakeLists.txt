@@ -66,6 +66,56 @@ target_compile_options(hb_tests PRIVATE
 
 add_test(NAME hb_tests COMMAND hb_tests)
 
+# Unit test for hb_css (GTK-only)
+add_executable(hb_css_tests
+        tests/test_hb_css.c
+        src/hb_css.c
+)
+
+target_include_directories(hb_css_tests PRIVATE
+        src
+        ${GTK4_INCLUDE_DIRS}
+)
+
+target_link_libraries(hb_css_tests
+        ${GTK4_LIBRARIES}
+)
+
+target_compile_options(hb_css_tests PRIVATE
+        ${GTK4_CFLAGS_OTHER}
+)
+
+add_test(NAME hb_css_tests COMMAND hb_css_tests)
+
+# Unit test for hb_window (GTK + WebKit)
+add_executable(hb_window_tests
+        tests/test_hb_window.c
+        src/hb_window.c
+        src/hb_css.c
+        src/hb_config.c
+)
+
+target_include_directories(hb_window_tests PRIVATE
+        src
+        ${GTK4_INCLUDE_DIRS}
+        ${WEBKIT_INCLUDE_DIRS}
+        ${JSONGLIB_INCLUDE_DIRS}
+)
+
+target_link_libraries(hb_window_tests
+        ${GTK4_LIBRARIES}
+        ${WEBKIT_LIBRARIES}
+        ${JSONGLIB_LIBRARIES}
+)
+
+target_compile_options(hb_window_tests PRIVATE
+        ${GTK4_CFLAGS_OTHER}
+        ${WEBKIT_CFLAGS_OTHER}
+        ${JSONGLIB_CFLAGS_OTHER}
+)
+
+add_test(NAME hb_window_tests COMMAND hb_window_tests)
+
 # Install rules
 include(GNUInstallDirs)
 install(TARGETS hudbox RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
