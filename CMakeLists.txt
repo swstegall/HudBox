@@ -3,6 +3,24 @@ project(HudBox C)
 
 set(CMAKE_C_STANDARD 23)
 
+# Determine version from latest git tag
+set(HUDBOX_VERSION "0.0.0")
+# Try to get the latest tag using git; fall back to default on failure
+find_package(Git QUIET)
+if(GIT_FOUND)
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} describe --tags --abbrev=0
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_TAG
+        RESULT_VARIABLE GIT_DESCRIBE_RESULT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    if(GIT_DESCRIBE_RESULT EQUAL 0 AND NOT GIT_TAG STREQUAL "")
+        set(HUDBOX_VERSION "${GIT_TAG}")
+    endif()
+endif()
+
 # Use pkg-config to find GTK, WebKitGTK, GLib, and JSON-GLib
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK4 REQUIRED gtk4)
@@ -16,6 +34,10 @@ add_executable(hudbox
         src/hb_config.c
         src/hb_window.c
 )
+
+# Expose version to the application as a preprocessor macro
+# Example usage in C: printf("%s", HUDBOX_VERSION);
+target_compile_definitions(hudbox PRIVATE HUDBOX_VERSION="${HUDBOX_VERSION}")
 
 # Include directories
 target_include_directories(hudbox PRIVATE

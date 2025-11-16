@@ -6,6 +6,10 @@
 #include "hb_config.h"
 #include "hb_window.h"
 
+#ifndef HUDBOX_VERSION
+#define HUDBOX_VERSION "0.0.0"
+#endif
+
 static void activate(GtkApplication* app, gpointer user_data)
 {
     // Ensure GTK toplevel backgrounds are fully transparent via CSS
@@ -63,6 +67,17 @@ static int on_command_line(GApplication* gapp, GApplicationCommandLine* cmdline,
 
     int argc = 0;
     char** argv = g_application_command_line_get_arguments(cmdline, &argc);
+
+    // Handle --version: print version and exit without activating GUI
+    for (int i = 1; i < argc; i++)
+    {
+        if (argv[i] && g_strcmp0(argv[i], "--version") == 0)
+        {
+            g_print("%s\n", HUDBOX_VERSION);
+            g_strfreev(argv);
+            return 0;
+        }
+    }
 
     const char* cfg_path = NULL;
     if (argc > 1 && argv[1] && argv[1][0] != '-')
