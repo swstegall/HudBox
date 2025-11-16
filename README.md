@@ -170,7 +170,7 @@ Notes:
 
 - Project type: CMake (see `CMakeLists.txt`)
 - Language standard: C23 (`set(CMAKE_C_STANDARD 23)`)
-- Main sources: `main.c`
+- Source layout: all `.c` and `.h` files live in `src/` (e.g., `src/main.c`, `src/hb_css.c`, `src/hb_config.c`, `src/hb_window.c`).
 
 
 ## License

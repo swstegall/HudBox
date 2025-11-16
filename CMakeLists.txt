@@ -9,10 +9,16 @@ pkg_check_modules(GTK4 REQUIRED gtk4)
 pkg_check_modules(WEBKIT REQUIRED webkitgtk-6.0)
 pkg_check_modules(JSONGLIB REQUIRED json-glib-1.0)
 
-add_executable(hudbox main.c)
+add_executable(hudbox
+        src/main.c
+        src/hb_css.c
+        src/hb_config.c
+        src/hb_window.c
+)
 
 # Include directories
 target_include_directories(hudbox PRIVATE
+        src
         ${GTK4_INCLUDE_DIRS}
         ${WEBKIT_INCLUDE_DIRS}
         ${JSONGLIB_INCLUDE_DIRS}
