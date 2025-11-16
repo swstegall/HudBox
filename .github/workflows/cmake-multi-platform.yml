@@ -69,6 +69,7 @@ jobs:
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
       run: ctest --build-config ${{ matrix.build_type }}
   tag:
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
