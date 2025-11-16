@@ -40,12 +40,12 @@ typedef struct
 
 static void hb_window_cfg_init_defaults(HbWindowCfg* cfg)
 {
-    cfg->title = g_strdup("Borderless Draggable WebView");
-    cfg->address = g_strdup("https://www.google.com");
+    cfg->title = g_strdup("HudBox");
+    cfg->address = g_strdup("https://github.com/swstegall/HudBox");
     cfg->width = 800;
-    cfg->height = 325;
+    cfg->height = 600;
     cfg->locked = FALSE;
-    cfg->opacity = 1.0;
+    cfg->opacity = 0.9;
     cfg->transparent = FALSE;
 }
 
@@ -184,6 +184,43 @@ static GPtrArray* hb_load_configs_from_json(const gchar* path)
     return arr;
 }
 
+static gboolean hb_write_default_config(const gchar* path)
+{
+    if (!path) return FALSE;
+    const char* json =
+        "[\n"
+        "\t{\n"
+        "\t  \"title\": \"HudBox\",\n"
+        "\t  \"address\": \"https://github.com/swstegall/HudBox\",\n"
+        "\t  \"width\": 800,\n"
+        "\t  \"height\": 600,\n"
+        "\t  \"locked\": false,\n"
+        "\t  \"opacity\": 0.9,\n"
+        "\t  \"transparent\": false\n"
+        "\t}\n"
+        "]\n";
+    GError* error = NULL;
+    gboolean ok = g_file_set_contents(path, json, -1, &error);
+    if (!ok)
+    {
+        if (error)
+        {
+            g_warning("Failed to write default config to %s: %s", path, error->message);
+            g_error_free(error);
+        }
+    }
+    return ok;
+}
+
+static void hb_ensure_default_config_exists(const gchar* path)
+{
+    if (!path) return;
+    if (!g_file_test(path, G_FILE_TEST_EXISTS))
+    {
+        hb_write_default_config(path);
+    }
+}
+
 // ---------------- Drag handling ----------------
 
 // Called when user starts dragging
@@ -274,6 +311,7 @@ static void activate(GtkApplication* app, gpointer user_data)
     GPtrArray* cfgs = NULL;
     if (path)
     {
+        hb_ensure_default_config_exists(path);
         cfgs = hb_load_configs_from_json(path);
         g_free(path);
     }
