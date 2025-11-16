@@ -65,3 +65,35 @@ jobs:
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
       run: ctest --build-config ${{ matrix.build_type }}
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Required for tags
+
+      - name: Get latest tag
+        id: latest
+        run: |
+          git fetch --tags
+          tag=$(git tag --sort=-v:refname | head -n 1)
+          if [ -z "$tag" ]; then tag="v0.0.0"; fi
+          echo "latest=$tag" >> $GITHUB_OUTPUT
+
+      - name: Calculate next tag
+        id: next
+        run: |
+          tag="${{ steps.latest.outputs.latest }}"
+          echo "Current tag: $tag"
+
+          IFS='.' read -r major minor patch <<< "${tag#v}"
+          patch=$((patch + 1))
+          new_tag="v$major.$minor.$patch"
+
+          echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
+
+      - name: Create and push tag
+        run: |
+          git tag ${{ steps.next.outputs.new_tag }}
+          git push origin ${{ steps.next.outputs.new_tag }}
