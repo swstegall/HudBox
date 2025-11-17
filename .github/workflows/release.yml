@@ -73,13 +73,13 @@ jobs:
       - name: Import GPG key for PPA signing
         if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
         env:
-          PPA_GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.gnupg
           chmod 700 ~/.gnupg
           echo 'use-agent' >> ~/.gnupg/gpg.conf
           echo 'pinentry-mode loopback' >> ~/.gnupg/gpg.conf
-          echo "$PPA_GPG_PRIVATE_KEY" | gpg --batch --yes --import
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
           echo "GPG keys imported:" && gpg --list-secret-keys --keyid-format LONG
 
       - name: Prepare debian/changelog from tag
