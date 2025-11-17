@@ -64,11 +64,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      #
+      # === PPA SECTION: only runs if a GPG key is present ===
+      #
+
       - name: Import GPG key for PPA signing
+        if: ${{ secrets.GPG_PRIVATE_KEY }}
         env:
           HAS_GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-        if: ${{ env.HAS_GPG_KEY != '' }}
         run: |
           mkdir -p ~/.gnupg
           chmod 700 ~/.gnupg
@@ -77,13 +81,12 @@ jobs:
           echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
           gpg --list-secret-keys --keyid-format LONG
 
-
       - name: Prepare debian/changelog from tag
+        if: ${{ secrets.GPG_PRIVATE_KEY }}
         env:
           HAS_GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           DEBEMAIL: ${{ secrets.LAUNCHPAD_EMAIL }}
           DEBFULLNAME: ${{ secrets.GPG_FULL_NAME }}
-        if: ${{ env.HAS_GPG_KEY != '' }}
         run: |
           VERSION="${{ steps.strings.outputs.version }}"
           DEBVER="${VERSION}-0ppa1~${UBUNTU_DIST}"
@@ -93,22 +96,22 @@ jobs:
               "Release $VERSION for PPA ($UBUNTU_DIST)"
 
       - name: Build signed source package for PPA
+        if: ${{ secrets.GPG_PRIVATE_KEY }}
         env:
           HAS_GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           DEBEMAIL: ${{ secrets.LAUNCHPAD_EMAIL }}
           DEBFULLNAME: ${{ secrets.GPG_FULL_NAME }}
           DEBSIGN_KEYID: ${{ secrets.GPG_KEY_ID }}
           DEBSIGN_GPGOPTS: "--batch --yes --pinentry-mode loopback --passphrase=${{ secrets.PPA_GPG_PASSPHRASE }}"
-        if: ${{ env.HAS_GPG_KEY != '' }}
         run: |
           debuild -S -sa
           ls -l ../*.changes
 
       - name: Upload to Launchpad PPA
+        if: ${{ secrets.GPG_PRIVATE_KEY }}
         env:
           HAS_GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           DPUT_HOST: ppa:swstegall/hudbox
-        if: ${{ env.HAS_GPG_KEY != '' }}
         run: |
           CHANGES_FILE=$(ls -1 ../*.changes | head -n1)
           dput "$DPUT_HOST" "$CHANGES_FILE"
