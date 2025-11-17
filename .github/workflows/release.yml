@@ -1,77 +1,37 @@
-name: Release
+name: Release to PPA
 
 on:
   push:
     tags:
-      - '*'
+      - "v*"
 
 jobs:
-  package:
+  build-and-release:
     runs-on: ubuntu-latest
-    env:
-      UBUNTU_DIST: noble
+
+    strategy:
+      matrix:
+        dist: [jammy, noble]
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Install Dependencies (Ubuntu)
+      - name: Install build dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential cmake ninja-build pkg-config \
-            gcc g++ clang \
-            libgtk-4-dev libwebkitgtk-6.0-dev libjson-glib-dev \
-            dpkg-dev fakeroot debhelper devscripts \
-            dput gnupg lintian
+          sudo apt update
+          sudo apt install -y devscripts debhelper dput gnupg2 build-essential cmake ninja-build
 
-      - name: Set reusable strings
-        id: strings
-        shell: bash
+      - name: Extract version from tag
+        id: version
         run: |
-          echo "build-output-dir=${GITHUB_WORKSPACE}/build" >> "$GITHUB_OUTPUT"
-          TAG="${GITHUB_REF_NAME}"
-          VERSION="${TAG#v}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-
-      - name: Configure CMake (Release)
-        run: >
-          cmake -B ${{ steps.strings.outputs.build-output-dir }}
-          -DCMAKE_C_COMPILER=gcc
-          -DCMAKE_CXX_COMPILER=g++
-          -DCMAKE_BUILD_TYPE=Release
-          -S ${{ github.workspace }}
-
-      - name: Build
-        run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config Release --parallel
-
-      - name: Make DEB with CPack
-        working-directory: ${{ steps.strings.outputs.build-output-dir }}
-        run: cpack -G DEB
-
-      - name: Upload DEB artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: hudbox-deb
-          path: ${{ steps.strings.outputs.build-output-dir }}/*.deb
-
-      - name: Create GitHub Release and upload .deb
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ steps.strings.outputs.build-output-dir }}/*.deb
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      #
-      # === PPA SECTION: only runs if a GPG key is present ===
-      #
+          RAW_TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${RAW_TAG#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Import GPG key for PPA signing
-        if: ${{ secrets.GPG_PRIVATE_KEY }}
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
         env:
-          HAS_GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.gnupg
@@ -81,37 +41,37 @@ jobs:
           echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
           gpg --list-secret-keys --keyid-format LONG
 
-      - name: Prepare debian/changelog from tag
-        if: ${{ secrets.GPG_PRIVATE_KEY }}
+      - name: Prepare debian/changelog
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
         env:
-          HAS_GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           DEBEMAIL: ${{ secrets.LAUNCHPAD_EMAIL }}
           DEBFULLNAME: ${{ secrets.GPG_FULL_NAME }}
+          UBUNTU_DIST: ${{ matrix.dist }}
         run: |
-          VERSION="${{ steps.strings.outputs.version }}"
+          VERSION="${{ steps.version.outputs.version }}"
           DEBVER="${VERSION}-0ppa1~${UBUNTU_DIST}"
           dch --package hudbox --newversion "$DEBVER" \
               --distribution "$UBUNTU_DIST" \
               --force-distribution \
               "Release $VERSION for PPA ($UBUNTU_DIST)"
 
-      - name: Build signed source package for PPA
-        if: ${{ secrets.GPG_PRIVATE_KEY }}
+      - name: Build signed source package
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
         env:
-          HAS_GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           DEBEMAIL: ${{ secrets.LAUNCHPAD_EMAIL }}
           DEBFULLNAME: ${{ secrets.GPG_FULL_NAME }}
           DEBSIGN_KEYID: ${{ secrets.GPG_KEY_ID }}
           DEBSIGN_GPGOPTS: "--batch --yes --pinentry-mode loopback --passphrase=${{ secrets.PPA_GPG_PASSPHRASE }}"
+          UBUNTU_DIST: ${{ matrix.dist }}
         run: |
           debuild -S -sa
           ls -l ../*.changes
 
       - name: Upload to Launchpad PPA
-        if: ${{ secrets.GPG_PRIVATE_KEY }}
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
         env:
-          HAS_GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           DPUT_HOST: ppa:swstegall/hudbox
         run: |
           CHANGES_FILE=$(ls -1 ../*.changes | head -n1)
+          echo "Uploading $CHANGES_FILE to $DPUT_HOST"
           dput "$DPUT_HOST" "$CHANGES_FILE"
