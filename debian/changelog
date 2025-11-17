@@ -1,0 +1,5 @@
+hudbox (0.0.0-0~UNRELEASED) UNRELEASED; urgency=medium
+
+  * Initial packaging skeleton. Version will be set by CI on tag.
+
+ -- swstegall <swstegall@gmail.com>  Sun, 16 Nov 2025 22:48:00 -0600

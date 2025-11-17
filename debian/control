@@ -1,0 +1,23 @@
+Source: hudbox
+Section: utils
+Priority: optional
+Maintainer: swstegall <swstegall@gmail.com>
+Homepage: https://github.com/swstegall/HudBox
+Standards-Version: 4.7.0
+Build-Depends: debhelper-compat (= 13),
+               cmake,
+               pkg-config,
+               ninja-build,
+               gcc,
+               libgtk-4-dev,
+               libwebkitgtk-6.0-dev,
+               libjson-glib-dev,
+               libglib2.0-dev
+Rules-Requires-Root: no
+
+Package: hudbox
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: HudBox — lightweight HUD overlay using GTK4/WebKitGTK
+ A small utility that renders heads-up-display overlays using GTK4 and
+ WebKitGTK.
