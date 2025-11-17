@@ -4,9 +4,12 @@ on:
   push:
     tags:
       - '*'
+
 jobs:
   package:
     runs-on: ubuntu-latest
+    env:
+      UBUNTU_DIST: noble
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,13 +29,18 @@ jobs:
             libgtk-4-dev \
             libwebkitgtk-6.0-dev \
             libjson-glib-dev \
-            dpkg-dev fakeroot
+            dpkg-dev fakeroot \
+            debhelper devscripts dput gnupg lintian
 
       - name: Set reusable strings
         id: strings
         shell: bash
         run: |
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+          # Strip a leading 'v' from tag to get the version (e.g. v1.2.3 -> 1.2.3)
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Configure CMake (Release)
         run: >
@@ -61,3 +69,50 @@ jobs:
           files: ${{ steps.strings.outputs.build-output-dir }}/*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Import GPG key for PPA signing
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        env:
+          PPA_GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+          echo 'use-agent' >> ~/.gnupg/gpg.conf
+          echo 'pinentry-mode loopback' >> ~/.gnupg/gpg.conf
+          echo "$PPA_GPG_PRIVATE_KEY" | gpg --batch --yes --import
+          echo "GPG keys imported:" && gpg --list-secret-keys --keyid-format LONG
+
+      - name: Prepare debian/changelog from tag
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        env:
+          DEBEMAIL: ${{ secrets.LAUNCHPAD_EMAIL }}
+          DEBFULLNAME: ${{ secrets.GPG_FULL_NAME }}
+        run: |
+          VERSION='${{ steps.strings.outputs.version }}'
+          # Debian revision format for PPA build
+          DEBVER="${VERSION}-0ppa1~${{ env.UBUNTU_DIST }}"
+          dch --package hudbox --newversion "$DEBVER" \
+              --distribution "${{ env.UBUNTU_DIST }}" \
+              --force-distribution \
+              "Release $VERSION for PPA (${{ env.UBUNTU_DIST }})"
+
+      - name: Build signed source package for PPA
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        env:
+          DEBEMAIL: ${{ secrets.LAUNCHPAD_EMAIL }}
+          DEBFULLNAME: ${{ secrets.GPG_FULL_NAME }}
+          DEBSIGN_KEYID: ${{ secrets.GPG_KEY_ID }}
+          DEBSIGN_GPGOPTS: --batch --yes --pinentry-mode loopback --passphrase ${{ secrets.PPA_GPG_PASSPHRASE }}
+        run: |
+          # Build source package (-S) including full source (-sa)
+          debuild -S -sa
+          echo "Built source changes:"
+          ls -l ../*.changes
+
+      - name: Upload to Launchpad PPA
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        env:
+          DPUT_HOST: ppa:swstegall/hudbox
+        run: |
+          CHANGES_FILE=$(ls -1 ../*.changes | head -n1)
+          dput "$DPUT_HOST" "$CHANGES_FILE"
