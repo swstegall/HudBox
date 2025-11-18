@@ -4,6 +4,11 @@ on:
   push:
     branches: ["master"]
 
+defaults:
+  run:
+    shell: bash
+    working-directory: ./site
+
 permissions:
   contents: write
   pages: write
