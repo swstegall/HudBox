@@ -36,43 +36,43 @@ jobs:
             c_compiler: cl
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          build-essential \
-          cmake \
-          ninja-build \
-          pkg-config \
-          gcc g++ \
-          clang \
-          libgtk-4-dev \
-          libwebkitgtk-6.0-dev \
-          libjson-glib-dev
+      - name: Install Dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            pkg-config \
+            gcc g++ \
+            clang \
+            libgtk-4-dev \
+            libwebkitgtk-6.0-dev \
+            libjson-glib-dev
 
-    - name: Set reusable strings
-      id: strings
-      shell: bash
-      run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+      - name: Set reusable strings
+        id: strings
+        run: |
+          echo "build-output-dir=${{ github.workspace }}/app/build" >> "$GITHUB_OUTPUT"
 
-    - name: Configure CMake
-      run: >
-        cmake -B ${{ steps.strings.outputs.build-output-dir }}
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -S ${{ github.workspace }}
+      - name: Configure CMake
+        run: >
+          cmake -B ${{ steps.strings.outputs.build-output-dir }}
+          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -S ${{ github.workspace }}/app
 
-    - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
+      - name: Build
+        run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
 
-    - name: Run unit tests (hb_tests)
-      working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      run: ctest -C ${{ matrix.build_type }} -R hb_tests --output-on-failure
+      - name: Run unit tests (hb_tests)
+        working-directory: ${{ steps.strings.outputs.build-output-dir }}
+        run: ctest -C ${{ matrix.build_type }} -R hb_tests --output-on-failure
+
   tag:
     needs: build
     runs-on: ubuntu-latest
@@ -80,7 +80,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # Required for tags
+          fetch-depth: 0
           token: ${{ secrets.PAT }}
 
       - name: Get latest tag
@@ -95,12 +95,9 @@ jobs:
         id: next
         run: |
           tag="${{ steps.latest.outputs.latest }}"
-          echo "Current tag: $tag"
-
           IFS='.' read -r major minor patch <<< "${tag#v}"
           patch=$((patch + 1))
           new_tag="v$major.$minor.$patch"
-
           echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
 
       - name: Create and push tag
@@ -111,4 +108,3 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag ${{ steps.next.outputs.new_tag }}
           git push https://$TOKEN:x-oauth-basic@github.com/${{ github.repository }}.git ${{ steps.next.outputs.new_tag }}
-          
