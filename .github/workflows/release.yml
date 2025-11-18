@@ -5,6 +5,11 @@ on:
     tags:
       - "v*"
 
+defaults:
+  run:
+    shell: bash
+    working-directory: ./app
+
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
