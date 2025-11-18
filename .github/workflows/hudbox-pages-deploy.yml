@@ -1,61 +1,54 @@
-name: Deploy HudBox Docusaurus Site to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["master"]
+    branches:
+      - main
 
 defaults:
   run:
     shell: bash
     working-directory: ./site
 
-permissions:
-  contents: write
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
-
 jobs:
   build:
-    name: Build HudBox Site
+    name: Build Docusaurus
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: site/package-lock.json
 
       - name: Install dependencies
-        working-directory: site
         run: npm ci
-
-      - name: Build Docusaurus
-        working-directory: site
+      - name: Build website
         run: npm run build
 
-      - name: Upload build artifact
+      - name: Upload Build Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: site/build
+          path: build
 
   deploy:
     name: Deploy to GitHub Pages
     needs: build
-    runs-on: ubuntu-latest
+
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write # to deploy to Pages
+      id-token: write # to verify the deployment originates from an appropriate source
+
+    # Deploy to the github-pages environment
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
+    runs-on: ubuntu-latest
     steps:
-      - name: Deploy
+      - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
