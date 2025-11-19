@@ -17,10 +17,11 @@ function HomepageHeader() {
         </Heading>
         <p className="hero__subtitle">{siteConfig.tagline}</p>
         <div className={styles.buttons}>
-          <Link
-            className="button button--secondary button--lg"
-            to="/docs/intro">
-            Docusaurus Tutorial - 5min ⏱️
+          <Link className="button button--secondary button--lg" to="/docs/intro">
+            Get Started
+          </Link>
+          <Link className="button button--outline button--lg" href="https://github.com/swstegall/HudBox" style={{marginLeft: '0.75rem'}}>
+            View on GitHub
           </Link>
         </div>
       </div>
@@ -32,8 +33,8 @@ export default function Home() {
   const {siteConfig} = useDocusaurusContext();
   return (
     <Layout
-      title={`Hello from ${siteConfig.title}`}
-      description="Description will go into a meta tag in <head />">
+      title={`${siteConfig.title} — GTK4 HUD for Linux`}
+      description="HudBox is a lightweight GTK4 + WebKitGTK heads‑up display window for Linux. Load any URL, control opacity, enable transparency, drag to move, and configure via JSON.">
       <HomepageHeader />
       <main>
         <HomepageFeatures />
