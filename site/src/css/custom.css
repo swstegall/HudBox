@@ -31,3 +31,14 @@
     --ifm-color-primary-lightest: #d4c4ff;
     --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+/* Fade-in animation for Docs pages using animate.css keyframes */
+/* Applies on initial load/navigation without needing to swizzle theme components */
+.theme-doc-markdown {
+    /* Ensure we use the same keyframes name as animate.css's animate__fadeIn */
+    opacity: 0; /* avoid flash of unanimated content */
+    animation-name: fadeIn;
+    animation-duration: 800ms;
+    animation-timing-function: ease;
+    animation-fill-mode: both; /* keep final state (opacity: 1) */
+}
