@@ -41,15 +41,7 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           git archive --prefix=hudbox-$VERSION/ -o ../hudbox_${VERSION}.orig.tar.gz HEAD
 
-      - name: Import key
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-        if: env.GPG_PRIVATE_KEY != ''
-        run: |
-          gpg --batch --yes --import <<< "$GPG_PRIVATE_KEY"
-          gpg --list-secret-keys --keyid-format LONG
-
-      - name: Import GPG key for PPA signing
+      - name: Setup GPG for signing
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         if: env.GPG_PRIVATE_KEY != ''
@@ -60,6 +52,7 @@ jobs:
           echo 'pinentry-mode loopback' >> "$GNUPGHOME/gpg.conf"
           echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
           gpg --list-secret-keys --keyid-format LONG
+          echo "GNUPGHOME=$GNUPGHOME" >> $GITHUB_ENV
 
       - name: Prepare debian/changelog
         env:
@@ -87,8 +80,6 @@ jobs:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         if: env.GPG_PRIVATE_KEY != ''
         run: |
-          mkdir -p "$GNUPGHOME"
-          chmod 700 "$GNUPGHOME"
           debuild -S -sa
           ls -l ../*.changes
 
