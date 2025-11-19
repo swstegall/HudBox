@@ -5,6 +5,10 @@
     width: 100%;
 }
 
+.feature {
+    /* Container for each feature; used to trigger hover animation on child SVG */
+}
+
 .featureSvg {
     height: 200px;
     width: 200px;

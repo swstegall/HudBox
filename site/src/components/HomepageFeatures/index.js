@@ -1,3 +1,4 @@
+import React, {useState, useCallback} from 'react';
 import clsx from 'clsx';
 import Heading from '@theme/Heading';
 import styles from './styles.module.css';
@@ -43,10 +44,33 @@ const FeatureList = [
 ];
 
 function Feature({Svg, title, description, delayMs = 0}) {
+    const [jello, setJello] = useState(false);
+
+    const handleMouseEnter = useCallback(() => {
+        // Trigger the jello animation by toggling the class
+        setJello(true);
+    }, []);
+
+    const handleAnimationEnd = useCallback(() => {
+        // Remove the class so it can be retriggered next hover
+        setJello(false);
+    }, []);
+
     return (
-        <div className={clsx('col col--4')}>
+        <div
+            className={clsx('col col--4', styles.feature)}
+            onMouseEnter={handleMouseEnter}
+        >
             <div className="text--center">
-                <Svg className={styles.featureSvg} role="img"/>
+                <Svg
+                    className={clsx(
+                        styles.featureSvg,
+                        'animate__animated',
+                        jello && 'animate__jello',
+                    )}
+                    role="img"
+                    onAnimationEnd={handleAnimationEnd}
+                />
             </div>
             <div className="text--center padding-horiz--md">
                 <Heading as="h3">{title}</Heading>
