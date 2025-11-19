@@ -41,15 +41,23 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           git archive --prefix=hudbox-$VERSION/ -o ../hudbox_${VERSION}.orig.tar.gz HEAD
 
+      - name: Import key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        if: env.GPG_PRIVATE_KEY != ''
+        run: |
+          gpg --batch --yes --import <<< "$GPG_PRIVATE_KEY"
+          gpg --list-secret-keys --keyid-format LONG
+
       - name: Import GPG key for PPA signing
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         if: env.GPG_PRIVATE_KEY != ''
         run: |
-          mkdir -p ~/.gnupg
-          chmod 700 ~/.gnupg
-          echo 'use-agent' >> ~/.gnupg/gpg.conf
-          echo 'pinentry-mode loopback' >> ~/.gnupg/gpg.conf
+          export GNUPGHOME=$(mktemp -d)
+          chmod 700 "$GNUPGHOME"
+          echo 'use-agent' >> "$GNUPGHOME/gpg.conf"
+          echo 'pinentry-mode loopback' >> "$GNUPGHOME/gpg.conf"
           echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
           gpg --list-secret-keys --keyid-format LONG
 
@@ -75,9 +83,12 @@ jobs:
           DEBSIGN_KEYID: ${{ secrets.GPG_KEY_ID }}
           DEBSIGN_GPGOPTS: "--batch --yes --pinentry-mode loopback --passphrase=${{ secrets.PPA_GPG_PASSPHRASE }}"
           UBUNTU_DIST: ${{ matrix.dist }}
+          GNUPGHOME: ${{ runner.temp }}/gnupg
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         if: env.GPG_PRIVATE_KEY != ''
         run: |
+          mkdir -p "$GNUPGHOME"
+          chmod 700 "$GNUPGHOME"
           debuild -S -sa
           ls -l ../*.changes
 
