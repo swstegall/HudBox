@@ -58,7 +58,13 @@ function Feature({Svg, title, description, delayMs = 0}) {
 
     return (
         <div
-            className={clsx('col col--4', styles.feature)}
+            className={clsx(
+                'col col--4',
+                styles.feature,
+                'animate__animated',
+                'animate__fadeIn',
+            )}
+            style={{animationDelay: `${delayMs}ms`}}
             onMouseEnter={handleMouseEnter}
         >
             <div className="text--center">
