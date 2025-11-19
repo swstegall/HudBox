@@ -11,7 +11,7 @@ static void test_init_defaults(void)
     g_assert_nonnull(cfg.title);
     g_assert_cmpstr(cfg.title, ==, "HudBox");
     g_assert_nonnull(cfg.address);
-    g_assert_cmpstr(cfg.address, ==, "https://github.com/swstegall/HudBox");
+    g_assert_cmpstr(cfg.address, ==, "https://swstegall.github.io/HudBox/");
     g_assert_cmpint(cfg.width, ==, 800);
     g_assert_cmpint(cfg.height, ==, 600);
     g_assert_false(cfg.locked);

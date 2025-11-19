@@ -150,7 +150,7 @@ set(CPACK_PACKAGE_NAME "hudbox")
 set(CPACK_PACKAGE_VENDOR "HudBox Project")
 set(CPACK_PACKAGE_CONTACT "swstegall <swstegall@gmail.com>")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "HudBox — lightweight HUD overlay using GTK4/WebKitGTK")
-set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/swstegall/HudBox")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://swstegall.github.io/HudBox/")
 set(CPACK_PACKAGE_VERSION "${HUDBOX_VERSION_NUMERIC}")
 
 # Generator and Debian specifics

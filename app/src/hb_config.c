@@ -5,7 +5,7 @@
 void hb_window_cfg_init_defaults(HbWindowCfg* cfg)
 {
     cfg->title = g_strdup("HudBox");
-    cfg->address = g_strdup("https://github.com/swstegall/HudBox");
+    cfg->address = g_strdup("https://swstegall.github.io/HudBox/");
     cfg->width = 800;
     cfg->height = 600;
     cfg->locked = FALSE;
@@ -155,7 +155,7 @@ gboolean hb_write_default_config(const gchar* path)
         "[\n"
         "\t{\n"
         "\t  \"title\": \"HudBox\",\n"
-        "\t  \"address\": \"https://github.com/swstegall/HudBox\",\n"
+        "\t  \"address\": \"https://swstegall.github.io/HudBox/\",\n"
         "\t  \"width\": 800,\n"
         "\t  \"height\": 600,\n"
         "\t  \"locked\": false,\n"
