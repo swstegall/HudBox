@@ -46,12 +46,21 @@ jobs:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         if: env.GPG_PRIVATE_KEY != ''
         run: |
+          # Create a temporary GNUPGHOME
           export GNUPGHOME=$(mktemp -d)
           chmod 700 "$GNUPGHOME"
+
+          # Configure GPG for non-interactive use
           echo 'use-agent' >> "$GNUPGHOME/gpg.conf"
           echo 'pinentry-mode loopback' >> "$GNUPGHOME/gpg.conf"
+
+          # Import the secret key
           echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
+
+          # Verify
           gpg --list-secret-keys --keyid-format LONG
+
+          # Export GNUPGHOME to subsequent steps
           echo "GNUPGHOME=$GNUPGHOME" >> $GITHUB_ENV
 
       - name: Prepare debian/changelog
@@ -76,10 +85,11 @@ jobs:
           DEBSIGN_KEYID: ${{ secrets.GPG_KEY_ID }}
           DEBSIGN_GPGOPTS: "--batch --yes --pinentry-mode loopback --passphrase=${{ secrets.PPA_GPG_PASSPHRASE }}"
           UBUNTU_DIST: ${{ matrix.dist }}
-          GNUPGHOME: ${{ runner.temp }}/gnupg
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         if: env.GPG_PRIVATE_KEY != ''
         run: |
+          # Use the GNUPGHOME from the setup step
+          export GNUPGHOME=$GNUPGHOME
           debuild -S -sa
           ls -l ../*.changes
 
