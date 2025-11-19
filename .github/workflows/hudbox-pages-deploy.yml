@@ -5,11 +5,6 @@ on:
     branches:
       - master
 
-defaults:
-  run:
-    shell: bash
-    working-directory: ./site
-
 jobs:
   build:
     name: Build Docusaurus
@@ -27,15 +22,17 @@ jobs:
           cache-dependency-path: site/package-lock.json
 
       - name: Install dependencies
+        working-directory: site
         run: npm ci
 
       - name: Build website
+        working-directory: site
         run: npm run build
 
       - name: Upload Build Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: site/build  # <-- important: path from repo root
+          path: site/build
 
   deploy:
     name: Deploy to GitHub Pages
