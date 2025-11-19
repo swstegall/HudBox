@@ -35,9 +35,9 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Import GPG key for PPA signing
-        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        if: env.GPG_PRIVATE_KEY != ''
         run: |
           mkdir -p ~/.gnupg
           chmod 700 ~/.gnupg
@@ -47,11 +47,12 @@ jobs:
           gpg --list-secret-keys --keyid-format LONG
 
       - name: Prepare debian/changelog
-        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
         env:
           DEBEMAIL: ${{ secrets.LAUNCHPAD_EMAIL }}
           DEBFULLNAME: ${{ secrets.GPG_FULL_NAME }}
           UBUNTU_DIST: ${{ matrix.dist }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        if: env.GPG_PRIVATE_KEY != ''
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           DEBVER="${VERSION}-0ppa1~${UBUNTU_DIST}"
@@ -61,21 +62,23 @@ jobs:
               "Release $VERSION for PPA ($UBUNTU_DIST)"
 
       - name: Build signed source package
-        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
         env:
           DEBEMAIL: ${{ secrets.LAUNCHPAD_EMAIL }}
           DEBFULLNAME: ${{ secrets.GPG_FULL_NAME }}
           DEBSIGN_KEYID: ${{ secrets.GPG_KEY_ID }}
           DEBSIGN_GPGOPTS: "--batch --yes --pinentry-mode loopback --passphrase=${{ secrets.PPA_GPG_PASSPHRASE }}"
           UBUNTU_DIST: ${{ matrix.dist }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        if: env.GPG_PRIVATE_KEY != ''
         run: |
           debuild -S -sa
           ls -l ../*.changes
 
       - name: Upload to Launchpad PPA
-        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
         env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           DPUT_HOST: ppa:swstegall/hudbox
+        if: env.GPG_PRIVATE_KEY != ''
         run: |
           CHANGES_FILE=$(ls -1 ../*.changes | head -n1)
           echo "Uploading $CHANGES_FILE to $DPUT_HOST"
