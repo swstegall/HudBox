@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="384" viewBox="0 0 512 384" role="img" aria-label="Frameless GTK4 window illustration">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7a39ff"/>
+      <stop offset="1" stop-color="#a78bff"/>
+    </linearGradient>
+  </defs>
+  <rect x="24" y="28" width="464" height="288" rx="18" fill="url(#g1)"/>
+  <rect x="44" y="48" width="424" height="248" rx="10" fill="#0f0f12"/>
+  <rect x="44" y="48" width="424" height="26" rx="10" fill="#1b1b22"/>
+  <g fill="#7a39ff" opacity=".85">
+    <circle cx="66" cy="61" r="6"/>
+    <rect x="86" y="56" width="48" height="10" rx="5"/>
+  </g>
+  <rect x="160" y="320" width="192" height="28" rx="14" fill="#7a39ff"/>
+  <text x="256" y="339" text-anchor="middle" font-family="Inter, system-ui, Arial" font-size="14" fill="#fff">Frameless HUD</text>
+</svg>

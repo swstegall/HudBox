@@ -12,7 +12,7 @@ import {themes as prismThemes} from 'prism-react-renderer';
 const config = {
   title: 'HudBox',
   tagline: 'Lightweight GTK4 HUD window for Linux desktops',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/favicon.svg',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
@@ -77,8 +77,8 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
-      // Replace with your project's social card
-      image: 'img/docusaurus-social-card.jpg',
+      // Project social card used for link previews
+      image: 'img/hudbox-social-card.svg',
       colorMode: {
         respectPrefersColorScheme: true,
       },
@@ -86,7 +86,7 @@ const config = {
         title: 'HudBox',
         logo: {
           alt: 'HudBox Logo',
-          src: 'img/logo.svg',
+          src: 'img/hudbox-logo.svg',
         },
         items: [
           {

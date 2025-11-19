@@ -5,7 +5,7 @@ import styles from './styles.module.css';
 const FeatureList = [
   {
     title: 'Frameless GTK4 Window',
-    Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
+    Svg: require('@site/static/img/hudbox-window.svg').default,
     description: (
       <>
         A minimal, decoration‑less window ideal for HUDs, dashboards, and overlays on Linux desktops.
@@ -14,7 +14,7 @@ const FeatureList = [
   },
   {
     title: 'WebKitGTK Inside',
-    Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
+    Svg: require('@site/static/img/hudbox-web.svg').default,
     description: (
       <>
         Load any web address you provide. Combine with transparency for stream overlays or status bars.
@@ -23,7 +23,7 @@ const FeatureList = [
   },
   {
     title: 'Transparent & Draggable',
-    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
+    Svg: require('@site/static/img/hudbox-transparency.svg').default,
     description: (
       <>
         Control opacity (0.0–1.0), enable full transparency, and click‑and‑drag content to move when unlocked.
@@ -32,7 +32,7 @@ const FeatureList = [
   },
   {
     title: 'JSON Configuration',
-    Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
+    Svg: require('@site/static/img/hudbox-config.svg').default,
     description: (
       <>
         Configure one or many windows with a simple JSON file. A default config is auto‑generated at <code>~/.hudbox.json</code> if missing.
