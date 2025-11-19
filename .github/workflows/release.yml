@@ -36,6 +36,11 @@ jobs:
           VERSION="${RAW_TAG#v}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+      - name: Generate upstream tarball (.orig.tar.gz)
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git archive --prefix=hudbox-$VERSION/ -o ../hudbox_${VERSION}.orig.tar.gz HEAD
+
       - name: Import GPG key for PPA signing
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
