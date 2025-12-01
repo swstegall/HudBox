@@ -16,7 +16,7 @@ jobs:
 
     strategy:
       matrix:
-        dist: [jammy, noble]
+        dist: [jammy, noble, questing]
 
     steps:
       - name: Checkout code
