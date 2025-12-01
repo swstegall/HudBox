@@ -47,12 +47,28 @@ jobs:
       - name: Setup GPG for signing
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+          PPA_GPG_PASSPHRASE: ${{ secrets.PPA_GPG_PASSPHRASE }}
         run: |
           export GNUPGHOME=$RUNNER_TEMP/gnupg
           mkdir -p "$GNUPGHOME"
           chmod 700 "$GNUPGHOME"
+          # Configure gpg-agent for non-interactive loopback pinentry
+          echo 'allow-loopback-pinentry' > "$GNUPGHOME/gpg-agent.conf"
+          echo 'pinentry-mode loopback' > "$GNUPGHOME/gpg.conf"
+          gpgconf --kill gpg-agent || true
+          # Import ASCII-armored PRIVATE key (must begin with BEGIN PGP PRIVATE KEY BLOCK)
           echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
-          gpg --list-secret-keys --keyid-format LONG
+          echo "Imported keys (secret):"
+          gpg --list-secret-keys --keyid-format LONG || true
+          # Fail fast if no secret keys are present (public key only won't work)
+          if ! gpg --list-secret-keys --keyid-format LONG | grep -q 'sec'; then
+            echo "ERROR: No secret key was imported. Ensure secrets.GPG_PRIVATE_KEY contains your ASCII-armored PRIVATE key (not just the public key)." >&2
+            exit 1
+          fi
+          # Quick signing self-test to validate passphrase + loopback work
+          echo test > /tmp/gpgtest.txt
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PPA_GPG_PASSPHRASE" -u "$GPG_KEY_ID" -as /tmp/gpgtest.txt -o /tmp/gpgtest.txt.asc
           echo "GNUPGHOME=$GNUPGHOME" >> $GITHUB_ENV
 
       - name: Prepare debian/changelog
