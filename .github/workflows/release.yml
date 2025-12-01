@@ -104,6 +104,7 @@ jobs:
         if: env.GPG_PRIVATE_KEY != ''
         run: |
           # -S for source-only, -sa to include full orig, -d to skip local Build-Depends check
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
           debuild -S -sa -d
           ls -l ../*.changes
 
