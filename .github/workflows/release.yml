@@ -22,12 +22,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install build dependencies
+      - name: Install packaging tools
         run: |
           sudo apt update
           sudo apt install -y \
-          devscripts debhelper dput gnupg2 build-essential cmake ninja-build \
-          libgtk-4-dev libwebkitgtk-6.0-dev libjson-glib-dev libglib2.0-dev pkg-config
+          devscripts debhelper dput gnupg2 build-essential lintian fakeroot
 
       - name: Extract version from tag
         id: version
@@ -37,9 +36,13 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Generate upstream tarball (.orig.tar.gz)
+        working-directory: .
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          git archive --prefix=hudbox-$VERSION/ -o ../hudbox_${VERSION}.orig.tar.gz HEAD
+          # Archive only the app subtree as upstream, exclude debian/ via worktree attributes
+          git archive --worktree-attributes \
+            --prefix=hudbox-$VERSION/ \
+            -o app/../hudbox_${VERSION}.orig.tar.gz HEAD:app
 
       - name: Setup GPG for signing
         env:
@@ -77,7 +80,8 @@ jobs:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         if: env.GPG_PRIVATE_KEY != ''
         run: |
-          debuild -S -sa
+          # -S for source-only, -sa to include full orig, -d to skip local Build-Depends check
+          debuild -S -sa -d
           ls -l ../*.changes
 
       - name: Upload to Launchpad PPA
