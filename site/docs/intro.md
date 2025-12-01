@@ -78,6 +78,20 @@ Notes:
 
 - The installed executable is named `hudbox` and is placed in `$prefix/bin` (e.g., `$HOME/.local/bin/hudbox` or `/usr/local/bin/hudbox`).
 
+### Install on Ubuntu using the official PPA
+
+If you are on Ubuntu, you can install HudBox from the `ppa:swstegall/hudbox` Personal Package Archive (PPA):
+
+```bash
+sudo add-apt-repository ppa:swstegall/hudbox
+sudo apt update
+sudo apt install hudbox
+```
+
+- This will install a prebuilt `hudbox` binary and pull required runtime dependencies automatically.
+- Works on currently supported Ubuntu releases that Launchpad builds for this PPA.
+- To remove later: `sudo apt remove hudbox` (and optionally `sudo add-apt-repository --remove ppa:swstegall/hudbox`).
+
 ---
 
 ## Usage
