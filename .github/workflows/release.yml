@@ -68,7 +68,14 @@ jobs:
           fi
           # Quick signing self-test to validate passphrase + loopback work
           echo test > /tmp/gpgtest.txt
-          gpg --batch --yes --pinentry-mode loopback --passphrase "$PPA_GPG_PASSPHRASE" -u "$GPG_KEY_ID" -as /tmp/gpgtest.txt -o /tmp/gpgtest.txt.asc
+          gpg --batch --yes \
+            --pinentry-mode loopback \
+            --passphrase "$PPA_GPG_PASSPHRASE" \
+            -u "$GPG_KEY_ID" \
+            -a \
+            -s \
+            -o /tmp/gpgtest.txt.asc \
+            /tmp/gpgtest.txt
           echo "GNUPGHOME=$GNUPGHOME" >> $GITHUB_ENV
 
       - name: Prepare debian/changelog
