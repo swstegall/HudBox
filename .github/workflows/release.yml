@@ -95,6 +95,8 @@ jobs:
 
       - name: Build signed source package
         env:
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+          PPA_GPG_PASSPHRASE: ${{ secrets.PPA_GPG_PASSPHRASE }}
           DEBEMAIL: ${{ secrets.LAUNCHPAD_EMAIL }}
           DEBFULLNAME: ${{ secrets.GPG_FULL_NAME }}
           DEBSIGN_KEYID: ${{ secrets.GPG_KEY_ID }}
@@ -103,6 +105,34 @@ jobs:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         if: env.GPG_PRIVATE_KEY != ''
         run: |
+          export GNUPGHOME=$RUNNER_TEMP/gnupg
+          mkdir -p "$GNUPGHOME"
+          chmod 700 "$GNUPGHOME"
+          # Configure gpg-agent for non-interactive loopback pinentry
+          echo 'allow-loopback-pinentry' > "$GNUPGHOME/gpg-agent.conf"
+          echo 'pinentry-mode loopback' > "$GNUPGHOME/gpg.conf"
+          gpgconf --kill gpg-agent || true
+          # Import ASCII-armored PRIVATE key (must begin with BEGIN PGP PRIVATE KEY BLOCK)
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
+          echo "Imported keys (secret):"
+          gpg --list-secret-keys --keyid-format LONG || true
+          # Fail fast if no secret keys are present (public key only won't work)
+          if ! gpg --list-secret-keys --keyid-format LONG | grep -q 'sec'; then
+            echo "ERROR: No secret key was imported. Ensure secrets.GPG_PRIVATE_KEY contains your ASCII-armored PRIVATE key (not just the public key)." >&2
+            exit 1
+          fi
+          # Quick signing self-test to validate passphrase + loopback work
+          echo test > /tmp/gpgtest.txt
+          gpg --batch --yes \
+            --pinentry-mode loopback \
+            --passphrase "$PPA_GPG_PASSPHRASE" \
+            -u "$GPG_KEY_ID" \
+            -a \
+            -s \
+            -o /tmp/gpgtest.txt.asc \
+            /tmp/gpgtest.txt
+          echo "GNUPGHOME=$GNUPGHOME" >> $GITHUB_ENV
+
           # -S for source-only, -sa to include full orig, -d to skip local Build-Depends check
           export GNUPGHOME="$RUNNER_TEMP/gnupg"
           debuild -S -sa -d
