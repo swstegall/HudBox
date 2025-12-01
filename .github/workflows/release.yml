@@ -108,9 +108,10 @@ jobs:
           # Build unsigned source package (-us -uc)
           debuild -S -sa -d -us -uc
 
-          debsign --keyid="$GPG_KEY_ID" --re-sign ../*.changes \
-            --batch --no-tty \
-            --passphrase "$PPA_GPG_PASSPHRASE"
+          # Inline-sign the .changes (and automatically the .dsc)
+          debsign -k"$GPG_KEY_ID" \
+            -p"gpg --batch --yes --pinentry-mode loopback --passphrase $PPA_GPG_PASSPHRASE" \
+            --re-sign ../*.changes
 
           ls -l ../*
 
