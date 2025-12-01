@@ -108,21 +108,9 @@ jobs:
           # Build unsigned source package (-us -uc)
           debuild -S -sa -d -us -uc
 
-          # Sign manually to avoid debsign problems on GitHub Actions
-          DSC=$(ls ../*.dsc)
-          CHG=$(ls ../*.changes)
-
-          echo "Signing $DSC"
-          gpg --batch --yes --pinentry-mode loopback \
-            --passphrase "$PPA_GPG_PASSPHRASE" \
-            -u "$GPG_KEY_ID" \
-            --detach-sign --armor "$DSC"
-
-          echo "Signing $CHG"
-          gpg --batch --yes --pinentry-mode loopback \
-            --passphrase "$PPA_GPG_PASSPHRASE" \
-            -u "$GPG_KEY_ID" \
-            --detach-sign --armor "$CHG"
+          debsign --keyid="$GPG_KEY_ID" --re-sign ../*.changes \
+            --batch --no-tty \
+            --passphrase "$PPA_GPG_PASSPHRASE"
 
           ls -l ../*
 
