@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.31.6)
+cmake_minimum_required(VERSION 3.22)
 project(HudBox C)
 
 set(CMAKE_C_STANDARD 23)
@@ -24,7 +24,14 @@ endif()
 # Use pkg-config to find GTK, WebKitGTK, GLib, and JSON-GLib
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK4 REQUIRED gtk4)
-pkg_check_modules(WEBKIT REQUIRED webkitgtk-6.0)
+# Try WebKitGTK for GTK4 across distros: prefer webkitgtk-6.0 (24.04+), fall back to webkit2gtk-4.1, then 4.0 (22.04)
+pkg_check_modules(WEBKIT webkitgtk-6.0)
+if(NOT WEBKIT_FOUND)
+    pkg_check_modules(WEBKIT webkit2gtk-4.1)
+endif()
+if(NOT WEBKIT_FOUND)
+    pkg_check_modules(WEBKIT REQUIRED webkit2gtk-4.0)
+endif()
 pkg_check_modules(JSONGLIB REQUIRED json-glib-1.0)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
 

@@ -10,7 +10,7 @@ Build-Depends: debhelper-compat (= 13),
                ninja-build,
                gcc,
                libgtk-4-dev,
-               libwebkitgtk-6.0-dev,
+               libwebkitgtk-6.0-dev | libwebkit2gtk-4.1-dev | libwebkit2gtk-4.0-dev,
                libjson-glib-dev,
                libglib2.0-dev
 Rules-Requires-Root: no

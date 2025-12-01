@@ -1,0 +1,6 @@
+# Exclude Debian packaging from upstream tarball created by `git archive`
+# The release workflow archives the app/ subtree as upstream.
+# This prevents including debian/ in the .orig.tar.gz
+# See: https://git-scm.com/docs/gitattributes#_export_ignore
+
+debian export-ignore
