@@ -45,7 +45,7 @@ echo "Importing key from keyserver and exporting in APT-compatible format…"
 
 echo "Downloading PPA key directly from Launchpad…"
 
-curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x${FPR}" \
+curl -fsSL "https://launchpad.net/~${USERNAME}/+archive/ubuntu/${REPO}/+files/${REPO}-ppa-key.asc" \
     | gpg --dearmor | sudo tee "$KRFILE" >/dev/null
 
 sudo chmod 644 "$KRFILE"
