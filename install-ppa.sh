@@ -43,16 +43,12 @@ sudo mkdir -p "$KRDIR"
 
 echo "Importing key from keyserver and exporting in APT-compatible format…"
 
-tmpkeyring=$(mktemp)
+echo "Downloading PPA key directly from Launchpad…"
 
-gpg --no-default-keyring --keyring "$tmpkeyring" \
-    --keyserver "$KEYSERVER" --recv-keys "$FPR"
-
-gpg --no-default-keyring --keyring "$tmpkeyring" \
-    --export "$FPR" | sudo tee "$KRFILE" >/dev/null
+curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x${FPR}" \
+    | gpg --dearmor | sudo tee "$KRFILE" >/dev/null
 
 sudo chmod 644 "$KRFILE"
-rm "$tmpkeyring"
 
 # Create .sources file
 SRCFILE="/etc/apt/sources.list.d/${USERNAME}-${REPO}-${CODENAME}.sources"
